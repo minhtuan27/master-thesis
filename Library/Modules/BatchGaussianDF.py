@@ -13,18 +13,16 @@ class BatchGaussianDF(tf.Module):
         X: tf.Tensor of shape (r, d)
     """
 
-    def __init__(self, m, r, init_scale, sigma, name=None):
+    def __init__(self, m, r, init_scale, sigma, gamma, name=None):
         super().__init__(name=name)
         self.C = tf.Variable(tf.multiply(tf.random.truncated_normal([m, r], mean=1.0, stddev=0.02), init_scale))
         self.V = tf.Variable(tf.eye(r, dtype=tf.float32))
         self.sigmasq = sigma ** 2
+        self.gamma = gamma
+
 
     @tf.function
-    def __call__(self, Y):
-        # Define the mask
-        M = tf.cast(tf.not_equal(Y, 0.0), tf.float32) # shape: (m, d)
-
-        # Compute X
+    def computeX(self, Y, M):
         @tf.function
         def compute_xk(inputs):
             m = tf.reshape(inputs[0], [-1, 1])
@@ -37,7 +35,40 @@ class BatchGaussianDF(tf.Module):
             fn=compute_xk, elems=(tf.transpose(M), tf.transpose(Y)), 
             fn_output_signature=tf.float32
         )
-        X = tf.transpose(X) # shape: (r, d)
+
+        return tf.transpose(X) # shape: (r, d)
+    
+
+    @tf.function
+    def updateX(self, Y, M, prev_X):
+        # X = X - gamma * C^T(M*CX - Y)
+        X = tf.subtract(
+            prev_X, 
+            tf.multiply(
+                self.gamma, 
+                tf.matmul(
+                    self.C, 
+                    tf.subtract(
+                        tf.multiply(M, tf.matmul(self.C, prev_X)),
+                        Y
+                    ),
+                    transpose_a=True
+                )
+            )
+        ) # shape: (r, d)
+        return X
+
+
+    @tf.function
+    def __call__(self, Y, prev_X = None):
+        # Define the mask
+        M = tf.cast(tf.not_equal(Y, 0.0), tf.float32) # shape: (m, d)
+
+        # Compute/Update X
+        if prev_X is None:
+            X = self.computeX(Y, M)
+        else:
+            X = self.updateX(Y, M, prev_X)
 
         # temp_cv = VX(\sigma^2I+X^TVX)^-1
         temp_cv = tf.matmul(
