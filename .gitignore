@@ -1,3 +1,10 @@
+# Python
+__pycache__/
+
+# Data
 Data/Netflix/Full/
 Data/Netflix/Raw.zip
 Data/MovieLens/Recommended/
+
+# Submission
+Submission/
