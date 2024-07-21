@@ -24,9 +24,6 @@ class NMF(tf.Module):
 
     @tf.function
     def __call__(self, train_tensor, train_M):
-        # Create masks
-        train_M = tf.cast(tf.not_equal(train_tensor, 0), tf.float32)
-
         # Update user factors
         self.C.assign(tf.multiply(
             self.C, 

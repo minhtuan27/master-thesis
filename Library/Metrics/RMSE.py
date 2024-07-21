@@ -1,10 +1,10 @@
 import tensorflow as tf
 
-class NMSE(tf.keras.metrics.Metric):
-    def __init__(self, name='nmse', **kwargs):
-        super(NMSE, self).__init__(name=name, **kwargs)
+class RMSE(tf.keras.metrics.Metric):
+    def __init__(self, name='rmse', **kwargs):
+        super(RMSE, self).__init__(name=name, **kwargs)
         self.total_squared_errors = self.add_weight(name='total_squared_errors', initializer='zeros')
-        self.total_samples = self.add_weight(name='total_samples', initializer='zeros')
+        self.total_count = self.add_weight(name='total_count', initializer='zeros')
 
     def update_state(self, y_true, y_pred, sample_weight=None):
         # If there is a mask, apply it
@@ -15,13 +15,13 @@ class NMSE(tf.keras.metrics.Metric):
 
         # Update states
         squared_errors = tf.reduce_sum(tf.square(y_true - y_pred))
-        samples = tf.reduce_sum(tf.square(y_true))
+        count = tf.math.count_nonzero(y_true, dtype=self.dtype)
         self.total_squared_errors.assign_add(squared_errors)
-        self.total_samples.assign_add(samples)
+        self.total_count.assign_add(count)
 
     def result(self):
-        return self.total_squared_errors / self.total_samples
+        return tf.sqrt(self.total_squared_errors / self.total_count)
 
     def reset_states(self):
         self.total_squared_errors.assign(0.0)
-        self.total_samples.assign(0.0)
+        self.total_count.assign(0.0)
