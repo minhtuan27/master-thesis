@@ -6,5 +6,8 @@ Data/Netflix/Full/
 Data/Netflix/Raw.zip
 Data/MovieLens/Recommended/
 
+# Large result files
+V_updates.csv
+
 # Submission
 Submission/

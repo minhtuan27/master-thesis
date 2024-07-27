@@ -30,7 +30,7 @@ class GaussianDF(tf.Module):
         return tf.reshape(x, [-1])
 
     @tf.function
-    def __call__(self, Y):
+    def __call__(self, Y, return_V_updates=False):
         # Define the mask
         M = tf.cast(tf.not_equal(Y, 0.0), tf.float32) # shape: (m, d)
 
@@ -62,6 +62,8 @@ class GaussianDF(tf.Module):
             )
         )) # shape: (m, r)
 
+        prev_V = self.V
+
         self.V.assign(tf.subtract(
             self.V,
             tf.matmul(
@@ -69,5 +71,10 @@ class GaussianDF(tf.Module):
                 temp
             )
         )) # shape: (r, r)
+
+        if return_V_updates:
+            prev_V = tf.repeat(tf.reshape(prev_V, [1, -1]), tf.shape(denominator)[1], axis=0)
+            V_updates = tf.divide(prev_V, tf.repeat(tf.reshape(denominator, [-1, 1]), tf.shape(prev_V)[1], axis=1))
+            return X, V_updates
 
         return X
