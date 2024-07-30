@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 def user_based_train_val_test_split(dataset: pd.DataFrame, test_size: float, val_size: float, random_state: int = None):
     """
@@ -22,12 +23,26 @@ def user_based_train_val_test_split(dataset: pd.DataFrame, test_size: float, val
     pd.DataFrame
         The testing set.
     """
+    if random_state:
+        np.random.seed(random_state)
+    
     grouped = dataset.groupby('User Index', group_keys=False)
-    test_set = grouped.apply(lambda x: x.sample(frac=test_size, random_state=random_state))
-    train_set = pd.concat([dataset, test_set]).drop_duplicates(keep=False)
+    
+    train_index = []
+    val_index = []
+    test_index = []
 
-    grouped = train_set.groupby('User Index', group_keys=False)
-    val_set = grouped.apply(lambda x: x.sample(frac=val_size, random_state=random_state))
-    train_set = pd.concat([train_set, val_set]).drop_duplicates(keep=False)
+    for _, group in grouped:
+        n = len(group)
+        test_counts = int(n * test_size)
+        val_counts = int(n * val_size * (1 - test_size))
+        indices = np.random.permutation(n)
+        test_index.extend(group.index[indices[:test_counts]])
+        val_index.extend(group.index[indices[test_counts:test_counts + val_counts]])
+        train_index.extend(group.index[indices[test_counts + val_counts:]])
+
+    train_set = dataset.loc[train_index]
+    val_set = dataset.loc[val_index]
+    test_set = dataset.loc[test_index]
 
     return train_set, val_set, test_set

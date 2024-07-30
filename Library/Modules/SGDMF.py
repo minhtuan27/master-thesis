@@ -7,6 +7,7 @@ class SGDMF(tf.Module):
     
     Input:
         Y: tf.Tensor of shape (m, d), where m is the number of samples and d is the batch size
+        k: tf.Tensor of shape (1), the iteration number
     Variables:
         C: tf.Tensor of shape (m, r)
     Output:
