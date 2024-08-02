@@ -17,7 +17,7 @@ class GaussianDF(tf.Module):
     def __init__(self, m, r, init_scale, train_lambda, name=None):
         super().__init__(name=name)
         self.C = tf.Variable(tf.multiply(tf.random.truncated_normal([m, r], mean=1.0, stddev=0.02), init_scale))
-        self.V = tf.Variable(tf.eye(r, dtype=tf.float32))
+        self.V = tf.Variable(tf.multiply(tf.eye(r, dtype=tf.float32), 1000.0))
         self.train_lambda = tf.constant(train_lambda)
 
     
