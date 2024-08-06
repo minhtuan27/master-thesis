@@ -15,17 +15,68 @@ class BernoulliDF(tf.Module):
 
     def __init__(self, m, n, r, gamma_X, gamma_C, sigma_C, name=None):
         super().__init__(name=name)
-        self.C = tf.Variable(tf.random.truncated_normal([m, r], mean=0.0, stddev=1.0))
-        self.X = tf.Variable(tf.random.truncated_normal([r, n], mean=0.0, stddev=1.0))
-        self.gamma_X = tf.constant(gamma_X, dtype=tf.float32)
-        self.gamma_C = tf.constant(gamma_C, dtype=tf.float32)
-        self.sigma_C = tf.constant(sigma_C ** 2, dtype=tf.float32)
+        
+        self.C = tf.Variable(tf.random.truncated_normal([m, r], mean=0.0, stddev=1.0, dtype=tf.float64))
+        self.X = tf.Variable(tf.random.truncated_normal([r, n], mean=0.0, stddev=1.0, dtype=tf.float64))
+        
+        self.gamma_X = tf.constant(gamma_X, dtype=tf.float64)
+        self.gamma_C = tf.constant(gamma_C, dtype=tf.float64)
+        self.sigma_C = tf.constant(sigma_C ** 2, dtype=tf.float64)
+
+        self.zero = tf.constant(0.0, dtype=tf.float64)
+        self.one = tf.constant(1.0, dtype=tf.float64)
+        self.two = tf.constant(2.0, dtype=tf.float64)
+        self.four = tf.constant(4.0, dtype=tf.float64)
 
     @tf.function
     def gradient(self, Y, C, X):
         return tf.subtract(
-            tf.multiply(Y, tf.subtract(1.0, tf.sigmoid(tf.matmul(C, X)))),
-            tf.multiply(tf.subtract(1.0, Y), tf.sigmoid(tf.matmul(C, X)))
+            tf.multiply(Y, tf.subtract(self.one, tf.sigmoid(tf.matmul(C, X)))),
+            tf.multiply(tf.subtract(self.one, Y), tf.sigmoid(tf.matmul(C, X)))
+        )
+    
+    @tf.function
+    def gradient_log_pi(self, Y, C, X):
+        return tf.multiply(
+            self.gamma_C,
+            tf.subtract(
+                tf.matmul(self.gradient(Y, C, X), X, transpose_b=True),
+                tf.divide(self.C, self.sigma_C)
+            )
+        )
+    
+    @tf.function
+    def log_pi(self, Y, C, X):
+        return tf.subtract(
+            tf.reduce_sum(
+                tf.add(
+                    tf.multiply(Y, tf.math.log(tf.sigmoid(tf.matmul(C, X)))),
+                    tf.multiply(tf.subtract(self.one, Y), tf.math.log(tf.subtract(self.one, tf.sigmoid(tf.matmul(C, X)))))
+                )
+            ),
+            tf.divide(tf.square(tf.norm(C)), self.two * self.sigma_C)
+        )
+    
+    @tf.function
+    def log_q(self, Y, X, C_tilde, C):
+        return tf.subtract(
+            self.zero,
+            tf.divide(
+                tf.square(tf.norm(tf.subtract(C_tilde, tf.add(C, self.gradient_log_pi(Y, C, X))))),
+                self.four * self.gamma_C
+            )
+        )
+    
+    @tf.function
+    def metropolis_hastings(self, Y, X, C_tilde, C):
+        return tf.minimum(
+            self.one,
+            tf.math.exp(
+                tf.subtract(
+                    tf.add(self.log_pi(Y, C_tilde, X), self.log_q(Y, X, C, C_tilde)),
+                    tf.add(self.log_pi(Y, C, X), self.log_q(Y, X, C_tilde, C))
+                )
+            )
         )
 
     @tf.function
@@ -44,17 +95,21 @@ class BernoulliDF(tf.Module):
         self.X[:, start_index:end_index].assign(Xk)
 
         # Update C
-        self.C.assign(
-            tf.add(
-                self.C,
-                tf.multiply(
-                    self.gamma_C,
-                    tf.subtract(
-                        tf.matmul(self.gradient(Yk, self.C, Xk), Xk, transpose_b=True),
-                        tf.divide(self.C, self.sigma_C)
-                    )
-                )
-            )
+        C_tilde = tf.add(
+            self.C,
+            # tf.add(
+            #     self.gradient_log_pi(Yk, self.C, Xk),
+            #     tf.multiply(
+            #         tf.sqrt(2.0 * self.gamma_C),
+            #         tf.random.normal(tf.shape(self.C), mean=0.0, stddev=1.0, dtype=tf.float64)
+            #     )
+            # )
+            self.gradient_log_pi(Yk, self.C, Xk)
         )
+        
+        # alpha = self.metropolis_hastings(Yk, Xk, C_tilde, self.C)
+        # if tf.random.uniform([], dtype=tf.float64) < alpha:
+        #     self.C.assign(C_tilde)
+        self.C.assign(C_tilde)
 
         return tf.sigmoid(tf.matmul(self.C, Xk))
