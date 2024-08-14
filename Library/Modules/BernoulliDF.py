@@ -13,7 +13,7 @@ class BernoulliDF(tf.Module):
         X: tf.Tensor of shape (r, d)
     """
 
-    def __init__(self, m, n, r, gamma_X, sigma_X, gamma_C, sigma_C, name=None):
+    def __init__(self, m, n, r, gamma_X, sigma_X, gamma_C, sigma_C, density, name=None):
         super().__init__(name=name)
         
         self.C = tf.Variable(tf.random.truncated_normal([m, r], mean=0.0, stddev=sigma_C, dtype=tf.float64))
@@ -23,6 +23,7 @@ class BernoulliDF(tf.Module):
         self.sigma_X = tf.constant(sigma_X ** 2, dtype=tf.float64)
         self.gamma_C = tf.constant(gamma_C, dtype=tf.float64)
         self.sigma_C = tf.constant(sigma_C ** 2, dtype=tf.float64)
+        self.density = tf.constant(density, dtype=tf.float64)
 
         self.one = tf.constant(1.0, dtype=tf.float64)
         self.two = tf.constant(2.0, dtype=tf.float64)
@@ -32,7 +33,7 @@ class BernoulliDF(tf.Module):
     def gradient(self, Y, C, X):
         return tf.subtract(
             tf.multiply(Y, tf.subtract(self.one, tf.sigmoid(tf.matmul(C, X)))),
-            tf.multiply(tf.subtract(self.one, Y), tf.sigmoid(tf.matmul(C, X)))
+            tf.multiply(tf.multiply(tf.subtract(self.one, Y), tf.sigmoid(tf.matmul(C, X))), self.density)
         )
     
     @tf.function
