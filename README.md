@@ -6,9 +6,9 @@ This repository contains the code for my thesis project. It is organized into th
 
 1. `Data`: This folder contains the datasets used in this projects.
     
-    1.1. `Netflix`: This folder contains the Netflix Prize dataset and the corresponding data extractor. The full Netflix Prize dataset was not uploaded because of its large size.
+    1.1. `Netflix`: This folder contains the Netflix Prize dataset and the corresponding data extractor. The full Netflix Prize dataset was not uploaded.
 
-    1.2. `MovieLens`: This folder contains the MovieLens datasets and the corresponding data extractor. The MovieLens 25M dataset was not uploaded because of its large size.
+    1.2. `MovieLens`: This folder contains the MovieLens datasets and the corresponding data extractor. The MovieLens 25M dataset was not uploaded.
 
     1.3. `Binary`: This folder contains various binary recommendation system datasets and the corresponding data extractor. 
 
