@@ -2,7 +2,7 @@ import tensorflow as tf
 
 class BatchGaussianDF(tf.Module):
     """
-    Apply a modified batch version of Dictionary Filter algorithm with Gaussian distribution model.
+    Apply a modified version of Dictionary Filter algorithm that uses different approaches to mini-batch processing.
     
     Input:
         Y: tf.Tensor of shape (m, d), where m is the number of samples and d is the batch size
